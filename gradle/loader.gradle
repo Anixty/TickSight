@@ -1,0 +1,88 @@
+def versionProperties = new Properties()
+rootProject.file("versions/${stonecutter.current.version}/gradle.properties").withInputStream { versionProperties.load(it) }
+versionProperties.each { key, value -> project.ext.set(key.toString(), value) }
+apply from: rootProject.file('gradle/base.gradle')
+def loader = property('loom.platform').toString()
+def commonProject = project(":${mcVersion}")
+def platformName = loader == 'neoforge' ? 'NeoForge' : loader.capitalize()
+base { archivesName = "${rootProject.archives_base_name}-${loader}" }
+architectury {
+    platformSetupLoomIde()
+    if (loader == 'fabric') fabric()
+    else if (loader == 'forge') forge()
+    else neoForge()
+}
+configurations {
+    commonBundle { canBeConsumed = false; canBeResolved = true }
+    shadowBundle { canBeConsumed = false; canBeResolved = true }
+    compileClasspath.extendsFrom(commonBundle)
+    runtimeClasspath.extendsFrom(commonBundle)
+    matching { it.name == "development${platformName}" }.configureEach { extendsFrom(commonBundle) }
+}
+dependencies {
+    if (loader == 'fabric') {
+        def modConfig = noRemap ? 'implementation' : 'modImplementation'
+        add(modConfig, "net.fabricmc:fabric-loader:${fabric_loader_version}")
+        add(modConfig, "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}")
+        add(modConfig, "dev.architectury:architectury-fabric:${architectury_version}")
+        add(noRemap ? 'localRuntime' : 'modLocalRuntime', "net.fabricmc:fabric-language-kotlin:${fabric_language_kotlin_version}")
+    } else {
+        if (loader == 'forge') forge("net.minecraftforge:forge:${mcVersion}-${forge_version}")
+        else neoForge("net.neoforged:neoforge:${neoforge_version}")
+        add(noRemap ? 'implementation' : 'modApi', "dev.architectury:architectury-${loader}:${architectury_version}")
+        add(noRemap ? 'localRuntime' : 'modLocalRuntime', "thedarkcolour:kotlinforforge${loader == 'neoforge' ? '-neoforge' : ''}:${kotlin_for_forge_version}")
+        // Forge's language-provider layer also needs Kotlin on its bootstrap
+        // library path in development; the installed KFF jar provides it in production.
+        forgeRuntimeLibrary("org.jetbrains.kotlin:kotlin-stdlib:${kotlin_runtime_version}")
+        forgeRuntimeLibrary("org.jetbrains.kotlin:kotlin-reflect:${kotlin_runtime_version}")
+        forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-json:${kotlin_serialization_version}")
+        forgeRuntimeLibrary("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:${kotlin_serialization_version}")
+    }
+    commonBundle(project(path: commonProject.path, configuration: noRemap ? 'default' : 'namedElements')) { transitive = false }
+    shadowBundle(project(path: commonProject.path, configuration: "transformProduction${platformName}")) { transitive = false }
+    shadowBundle("org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:${kotlin_serialization_version}") { transitive = false }
+}
+if (loader == 'forge') { loom.forge { mixinConfig 'ticksight.mixins.json' } }
+processResources {
+    def props = [version: project.version, minecraft_version: mcVersion,
+        java_version: targetJava, architectury_version: architectury_version,
+        fabric_loader_version: fabric_loader_version,
+        fabric_language_kotlin_version: fabric_language_kotlin_version,
+        loader_version: loader == 'forge' ? forge_version : (loader == 'neoforge' ? neoforge_version : fabric_loader_version),
+        kotlin_for_forge_version: findProperty('kotlin_for_forge_version') ?: '']
+    inputs.properties(props)
+    filesMatching(['fabric.mod.json', 'META-INF/mods.toml', 'META-INF/neoforge.mods.toml']) { expand(props) }
+}
+shadowJar {
+    // The dependencies contribute a versioned module descriptor, which Shadow
+    // drops. Forge 1.20.1 rejects Multi-Release jars without any versioned classes.
+    addMultiReleaseAttribute = false
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    filesMatching('META-INF/*.kotlin_module') {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    configurations = [project.configurations.shadowBundle]
+    archiveClassifier = noRemap ? '' : 'dev-shadow'
+    exclude 'architectury.common.json'
+    if (loader != 'fabric') exclude 'fabric.mod.json'
+    relocate 'kotlinx.serialization.protobuf', 'net.anixty.ticksight.shadow.kotlinx.serialization.protobuf'
+}
+if (!noRemap) {
+    remapJar {
+        inputFile.set(shadowJar.archiveFile)
+        dependsOn(shadowJar)
+        archiveClassifier = ''
+    }
+}
+jar { archiveClassifier = 'dev' }
+build { dependsOn(noRemap ? shadowJar : remapJar) }
+sourcesJar {
+    dependsOn(commonProject.tasks.named('sourcesJar'))
+    from(commonProject.tasks.named('sourcesJar').flatMap { it.archiveFile }.map { zipTree(it) })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+tasks.register('collectJar', Copy) {
+    dependsOn(tasks.named('build'))
+    from(tasks.named(noRemap ? 'shadowJar' : 'remapJar').flatMap { it.archiveFile })
+    into(rootProject.layout.buildDirectory.dir('libs'))
+}

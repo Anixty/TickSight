@@ -1,0 +1,7 @@
+plugins {
+    id 'dev.architectury.loom-no-remap'
+    id 'architectury-plugin'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'com.gradleup.shadow'
+}
+apply from: rootProject.file('gradle/loader.gradle')

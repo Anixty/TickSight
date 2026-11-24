@@ -20,4 +20,12 @@ classes/
 
 .architectury-transformer/
 
-assets/
+/assets/
+# Stonecutter
+versions/*/src/
+versions/*/build.gradle*
+versions/*/stonecutter.gradle*
+fabric/versions/
+forge/versions/
+neoforge/versions/
+.stonecutter/

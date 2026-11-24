@@ -1,33 +1,35 @@
-on: push
+name: Build TickSight
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: setup jdk
+      - name: Set up Java toolchains
         uses: actions/setup-java@v4
         with:
-          java-version: 21
+          java-version: |
+            17
+            21
+            25
           distribution: temurin
-          cache: gradle
-      - name: gradle setup
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: gradle build
-        run: ./gradlew build --no-daemon
-      - name: set params
-        run: |
-          cat $GITHUB_WORKSPACE/gradle.properties | grep ^archives_base_name= >> $GITHUB_ENV
-          cat $GITHUB_WORKSPACE/gradle.properties | grep ^minecraft_version= >> $GITHUB_ENV
-          cat $GITHUB_WORKSPACE/gradle.properties | grep ^mod_version= >> $GITHUB_ENV
-      - name: set package name
-        run: echo "pkg_file=$archives_base_name-$mod_version.jar" >> $GITHUB_ENV
+      - name: Test the upload protocol locally
+        run: ./gradlew -p upload-test check --console=plain
+      - name: Build all Minecraft and loader variants
+        run: ./gradlew collectJars --console=plain
       - uses: actions/upload-artifact@v4
         with:
-          name: observable-${{env.mod_version}}-${{env.minecraft_version}}_r${{github.run_number}}
-          path: |
-            forge/build/libs/*.jar
-            fabric/build/libs/*.jar
-            !**/*-dev.jar
-            !**/*-shadow.jar
-            !**/*-transformProduction*.jar
+          name: ticksight-${{github.sha}}
+          path: build/libs/*.jar
+          if-no-files-found: error

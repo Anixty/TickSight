@@ -1,0 +1,47 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MPL-2.0"
+issueTrackerURL = "https://github.com/Anixty/TickSight/issues"
+
+[[mods]]
+modId = "ticksight"
+version = "${version}"
+displayName = "TickSight"
+logoFile = "assets/ticksight/icon.png"
+authors = "Anixty, tasgon (Observable)"
+displayURL = "https://ticksight.anixty.net/"
+description = '''
+Find expensive blocks and entities right in your world.
+A fork of Observable by tasgon.
+'''
+
+[[dependencies.ticksight]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft_version}]"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.ticksight]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${loader_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.ticksight]]
+modId = "architectury"
+type = "required"
+versionRange = "[${architectury_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.ticksight]]
+modId = "kotlinforforge"
+type = "required"
+versionRange = "[${kotlin_for_forge_version},)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "ticksight.mixins.json"

@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "net.anixty.ticksight.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "CommandSourceStackAccessor",
+    "ChunkMapAccessor",
+    "DistanceManagerAccessor",
+    "TicketAccessor",
+    "TickingTrackerAccessor",
+    "TicketStorageAccessor",
+    "NeoForgeTicketOwnerAccessor",
+    "NeoForgeTicketTrackerAccessor",
+    "ForgeTicketOwnerAccessor",
+    "LevelMixin",
+    "ServerLevelMixin"
+  ],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

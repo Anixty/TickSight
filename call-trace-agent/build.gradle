@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow'
+}
+
+version = rootProject.mod_version
+base { archivesName = 'ticksight-call-trace-agent' }
+
+repositories { mavenCentral() }
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+tasks.withType(JavaCompile).configureEach { options.release = 17 }
+
+dependencies {
+    implementation 'org.ow2.asm:asm-commons:9.10.1'
+    implementation 'org.ow2.asm:asm-tree:9.10.1'
+}
+
+jar { archiveClassifier = 'dev' }
+shadowJar {
+    archiveClassifier = ''
+    relocate 'org.objectweb.asm', 'net.anixty.ticksight.agent.asm'
+    manifest { attributes 'Premain-Class': 'net.anixty.ticksight.agent.CallTraceAgent' }
+    from(rootProject.file('LICENSE'))
+}
+
+tasks.register('collectJar', Copy) {
+    from(tasks.named('shadowJar').flatMap { it.archiveFile })
+    into(rootProject.layout.buildDirectory.dir('libs'))
+}

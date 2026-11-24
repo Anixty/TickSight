@@ -1,0 +1,59 @@
+ext.mcVersion = stonecutter.current.version
+ext.noRemap = mcVersion.startsWith('26.')
+ext.targetJava = Integer.parseInt(property('java_version').toString())
+version = "${rootProject.mod_version}+mc${mcVersion}"
+// Stonecutter names every version node after Minecraft. Distinct groups keep
+// common and loader nodes from resolving as the same Gradle component.
+group = "${rootProject.maven_group}.${project.parent == rootProject ? 'common' : project.parent.name}"
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.architectury.dev/' }
+    maven { url = 'https://maven.fabricmc.net/' }
+    maven { url = 'https://maven.neoforged.net/releases/' }
+    maven { url = 'https://maven.minecraftforge.net/' }
+    maven { url = 'https://maven.shedaniel.me/' }
+    maven { url = 'https://thedarkcolour.github.io/KotlinForForge/' }
+}
+loom { silentMojangMappingsLicense() }
+dependencies {
+    minecraft("${noRemap ? 'net.minecraft' : 'com.mojang'}:minecraft:${mcVersion}")
+    if (!noRemap) mappings(loom.officialMojangMappings())
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:${property('kotlin_runtime_version')}")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-protobuf:${kotlin_serialization_version}")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${kotlin_serialization_version}")
+}
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(targetJava)
+    withSourcesJar()
+}
+kotlin { jvmToolchain(targetJava) }
+// Older loader language adapters ship Kotlin 2.2. Keep their metadata readable
+// while using one compiler plugin for the complete Gradle build.
+def kotlinVersionType = plugins.getPlugin('org.jetbrains.kotlin.jvm').class.classLoader.loadClass('org.jetbrains.kotlin.gradle.dsl.KotlinVersion')
+def languageLevel = kotlinVersionType.getField(noRemap ? 'KOTLIN_2_4' : 'KOTLIN_2_2').get(null)
+kotlin.compilerOptions.languageVersion.set(languageLevel)
+kotlin.compilerOptions.apiVersion.set(languageLevel)
+kotlin.compilerOptions.moduleName.set("ticksight${project.path.replace(':', '-')}")
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = targetJava
+}
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+tasks.withType(Jar).configureEach { from(rootProject.file('LICENSE')) }
+processResources {
+    inputs.property('minecraftVersion', mcVersion)
+    doLast {
+        def mixinFile = destinationDir.toPath().resolve('ticksight.mixins.json').toFile()
+        if (mixinFile.exists()) {
+            def config = new groovy.json.JsonSlurper().parse(mixinFile)
+            config.mixins.removeAll(noRemap ? ['TicketAccessor', 'TickingTrackerAccessor'] : ['TicketStorageAccessor', 'NeoForgeTicketTrackerAccessor'])
+            if (mcVersion != '1.20.1') config.mixins.remove('ForgeTicketOwnerAccessor')
+            if (noRemap) config.client = ['DebugRendererMixin']
+            config.compatibilityLevel = "JAVA_${targetJava}"
+            mixinFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(config))
+        }
+    }
+}

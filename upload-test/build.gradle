@@ -1,0 +1,21 @@
+plugins { id 'java' }
+
+java { toolchain.languageVersion = JavaLanguageVersion.of(17) }
+sourceSets.main.java {
+    srcDir '../src/main/java'
+    include 'net/anixty/ticksight/server/ProfileUpload.java'
+}
+sourceSets {
+    smokeTest {
+        java.srcDir 'src/test/java'
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+    test.java.setSrcDirs([])
+}
+tasks.register('uploadSmokeTest', JavaExec) {
+    dependsOn(smokeTestClasses)
+    classpath = sourceSets.smokeTest.runtimeClasspath
+    mainClass = 'net.anixty.ticksight.server.UploadSmokeTest'
+}
+check { dependsOn(uploadSmokeTest) }

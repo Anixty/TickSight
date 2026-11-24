@@ -1,29 +1,32 @@
 {
   "schemaVersion": 1,
-  "id": "observable",
+  "id": "ticksight",
   "version": "${version}",
-  "name": "Observable",
+  "name": "TickSight",
+  "icon": "assets/ticksight/icon.png",
   "description": "See what's lagging your world.",
-  "authors": ["tasgon"],
+  "authors": ["Anixty", "tasgon (Observable)"],
   "contact": {
-    "homepage": "https://github.com/tasgon/observable",
-    "sources": "https://github.com/tasgon/observable"
+    "homepage": "https://ticksight.anixty.net/",
+    "sources": "https://github.com/Anixty/TickSight",
+    "issues": "https://github.com/Anixty/TickSight/issues"
   },
-  "license": "MPL",
-  "icon": "assets/examplemod/icon.png",
+  "license": "MPL-2.0",
   "environment": "*",
   "entrypoints": {
-    "main": ["observable.fabric.ObservableFabric"],
-    "client": ["observable.fabric.Client"]
+    "main": ["net.anixty.ticksight.fabric.TickSightFabric"],
+    "client": ["net.anixty.ticksight.fabric.Client"]
   },
-  "mixins": ["observable.common.json"],
+  "mixins": ["ticksight.mixins.json"],
   "depends": {
-    "fabricloader": ">=0.12.0",
-    "fabric": "*",
-    "minecraft": ">=1.21.1",
-    "architectury": ">=4.1.32"
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": "*",
+    "fabric-language-kotlin": ">=${fabric_language_kotlin_version}",
+    "java": ">=${java_version}",
+    "minecraft": "${minecraft_version}",
+    "architectury": ">=${architectury_version}"
   },
-  "suggests": {
-    "flamingo": "*"
+  "breaks": {
+    "observable": "*"
   }
 }
